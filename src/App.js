@@ -7,255 +7,148 @@ import PostPage from "./PostPage";
 import About from "./About";
 import Missing from "./Missing";
 import Footer from "./Footer";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import EditPost from "./EditPost";
 
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
-import api from "./api/post";
-import EditPost from "./EditPost";
-
 function App() {
-
-  // STATES
-  const [posts, setPosts] = useState([ {
-    id: 1,
-    title: "Getting Started with React",
-    datetime: "May 21, 2026 10:15:00 AM",
-    body: "Today I started learning React. Components and hooks are interesting!"
-  },
-  {
-    id: 2,
-    title: "My Second Post",
-    datetime: "May 21, 2026 11:30:45 AM",
-    body: "Practicing useState and useEffect. Slowly getting confidence in React."
-  },
-  {
-    id: 3,
-    title: "Deployment Practice",
-    datetime: "May 21, 2026 12:48:20 PM",
-    body: "Trying to deploy my React app. Fixing bugs and improving UI step by step."
-  },
-  {
-    id: 4,
-    title: "Learning API Integration",
-    datetime: "May 21, 2026 1:10:05 PM",
-    body: "Started using Axios to fetch data from JSON server. Feeling powerful 😄"
-  }]);
-  const [searchResult, setSearchResult] = useState([]);
-  const [search, setSearch] = useState("");
-
-  const [postTitle, setPostTitle] = useState("");
-  const [PostBody, setPostBody] = useState("");
-
   const navigate = useNavigate();
 
-  // FETCH POSTS
+  // ✅ LOCAL STATE (NO API)
+  const [posts, setPosts] = useState([
+    {
+      id: 1,
+      title: "Getting Started with React",
+      datetime: "May 21, 2026 10:15:00 AM",
+      body: "Today I started learning React. Components and hooks are interesting!",
+    },
+    {
+      id: 2,
+      title: "My Second Post",
+      datetime: "May 21, 2026 11:30:45 AM",
+      body: "Practicing useState and useEffect. Slowly getting confidence in React.",
+    },
+    {
+      id: 3,
+      title: "Deployment Practice",
+      datetime: "May 21, 2026 12:48:20 PM",
+      body: "Trying to deploy my React app. Fixing bugs and improving UI step by step.",
+    },
+  ]);
+
+  const [search, setSearch] = useState("");
+  const [searchResult, setSearchResult] = useState([]);
+
+  const [postTitle, setPostTitle] = useState("");
+  const [postBody, setPostBody] = useState("");
+
+  // 🔍 SEARCH
   useEffect(() => {
-
-    const fetchPosts = async () => {
-
-      try {
-
-        const response = await api.get("/posts");
-
-        setPosts(response.data);
-
-      } catch (err) {
-
-        console.log(err.message);
-
-      }
-    };
-
-    fetchPosts();
-
-  }, []);
-
-  // SEARCH POSTS
-  useEffect(() => {
-
-    const filterResults = posts.filter(
+    const results = posts.filter(
       (post) =>
         post.title.toLowerCase().includes(search.toLowerCase()) ||
         post.body.toLowerCase().includes(search.toLowerCase())
     );
 
-    setSearchResult([...filterResults].reverse());
-
+    setSearchResult(results.reverse());
   }, [posts, search]);
 
-  // ADD NEW POST
-  const handleSubmit = async (e) => {
-
+  // ➕ ADD POST
+  const handleSubmit = (e) => {
     e.preventDefault();
 
-    const id =
-      posts.length
-        ? Number(posts[posts.length - 1].id) + 1
-        : 1;
+    const newId = posts.length ? posts[posts.length - 1].id + 1 : 1;
 
-    const datetime = format(
-      new Date(),
-      "MMMM dd, yyyy pp"
-    );
+    const datetime = format(new Date(), "MMMM dd, yyyy pp");
 
     const newPost = {
-      id,
+      id: newId,
       title: postTitle,
       datetime,
-      body: PostBody
+      body: postBody,
     };
 
-    try {
+    setPosts([...posts, newPost]);
 
-      const response = await api.post(
-        "/posts",
-        newPost
-      );
+    setPostTitle("");
+    setPostBody("");
 
-      setPosts((prevPosts) => [
-        ...prevPosts,
-        response.data
-      ]);
-
-      setPostTitle("");
-      setPostBody("");
-
-      navigate("/");
-
-    } catch (err) {
-
-      console.log(err.message);
-
-    }
+    navigate("/");
   };
 
-  // DELETE POST
-  const handleDelete = async (id) => {
+  // ❌ DELETE POST
+  const handleDelete = (id) => {
+    const updatedPosts = posts.filter((post) => post.id !== id);
+    setPosts(updatedPosts);
 
-    try {
-
-      await api.delete(`/posts/${id}`);
-
-      const postList = posts.filter(
-        (post) =>
-          post.id.toString() !== id.toString()
-      );
-
-      setPosts(postList);
-
-      navigate("/");
-
-    } catch (err) {
-
-      console.log(err.message);
-
-    }
+    navigate("/");
   };
 
-  // EDIT POST
-  const handleEdit = async (id, updatedPost) => {
+  // ✏️ EDIT POST
+  const handleEdit = (id, updatedPost) => {
+    const updatedPosts = posts.map((post) =>
+      post.id === id ? updatedPost : post
+    );
 
-    try {
+    setPosts(updatedPosts);
 
-      const response = await api.put(
-        `/posts/${id}`,
-        updatedPost
-      );
-
-      setPosts(
-        posts.map((post) =>
-          post.id.toString() === id.toString()
-            ? response.data
-            : post
-        )
-      );
-
-      setSearch("");
-
-      navigate(`/post/${id}`);
-
-    } catch (err) {
-
-      console.log(err.message);
-
-    }
+    navigate(`/post/${id}`);
   };
 
   return (
-
     <div className="App">
-
       <Header title="social media" />
 
-      <Nav
-        search={search}
-        setSearch={setSearch}
-      />
+      <Nav search={search} setSearch={setSearch} />
 
       <Routes>
+        {/* HOME */}
+        <Route path="/" element={<Home posts={searchResult} />} />
 
-        <Route
-          path="/"
-          element={
-            <Home posts={searchResult} />
-          }
-        />
-
+        {/* NEW POST */}
         <Route path="/post">
-
           <Route
             index
             element={
               <NewPost
                 postTitle={postTitle}
                 setPostTitle={setPostTitle}
-                PostBody={PostBody}
+                postBody={postBody}
                 setPostBody={setPostBody}
                 handleSubmit={handleSubmit}
               />
             }
           />
 
+          {/* SINGLE POST */}
           <Route
             path=":id"
             element={
-              <PostPage
-                posts={posts}
-                handleDelete={handleDelete}
-              />
+              <PostPage posts={posts} handleDelete={handleDelete} />
             }
           />
-
         </Route>
 
+        {/* EDIT */}
         <Route
           path="/edit/:id"
           element={
-            <EditPost
-              posts={posts}
-              handleEdit={handleEdit}
-            />
+            <EditPost posts={posts} handleEdit={handleEdit} />
           }
         />
 
-        <Route
-          path="/about"
-          element={<About />}
-        />
+        {/* ABOUT */}
+        <Route path="/about" element={<About />} />
 
-        <Route
-          path="*"
-          element={<Missing />}
-        />
-
+        {/* 404 */}
+        <Route path="*" element={<Missing />} />
       </Routes>
 
       <Footer />
-
     </div>
   );
 }
 
-export default App
+export default App;
